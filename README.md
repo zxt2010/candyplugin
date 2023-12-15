@@ -1,4 +1,4 @@
-# candyplugin
+# Candy Plugin
 ## Document
 #### 1.Apply for a map key
 #### 2.Enter key into map.html
