@@ -11,4 +11,4 @@
 #### function updateBounds(params)  //param: "lat,lng,lat,lng"
 #### function clearMarkers() 
 #### function clearLines() 
-#### window.guider.viewchange(param) ////param: "lat,lng,zoom"
+#### window.guider.viewchange(param) //param: "lat,lng,zoom"
