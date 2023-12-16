@@ -1,1 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Bing Maps Plugin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="text/javascript" src="https://www.bing.com/api/maps/mapcontrol?key= "></script>
+  <script>
+    var map;
+    var markers = [];
+    var lines = [];
+    function loadMap() {
+      map = new Microsoft.Maps.Map("#mapDiv", {
+        mapTypeId: Microsoft.Maps.MapTypeId.aerial,
+		showDashboard: false,
+      });
+	   Microsoft.Maps.Events.addHandler(map, 'viewchangeend', function () {
+			let p =gcj02towgs84(map.getCenter().latitude,map.getCenter().longitude)
+			if(window.guider){
+				window.guider.viewchange(p[0]+","+p[1]+","+map.getZoom())
+			}
+       });
+    }
 
+    function updateMapCenter(latlng) {
+      const pos = latlng.split(",");
+      const lat = Number(pos[0]);
+      const lng = Number(pos[1]);
+      const corrected=wgs84togcj02(lat,lng)
+      map.setView({ center: new Microsoft.Maps.Location(corrected.lat, corrected.lng) });
+    }
+
+    function addMarkers(params) {
+      const datas = params.split(",");
+      for (let i = 0; i < datas.length; i += 3) {
+        const lat = Number(datas[i]);
+        const lng = Number(datas[i + 1]);
+        const iconb64 = 'data:image/png;base64,'+datas[i + 2];
+        const corrected=wgs84togcj02(lat,lng)
+        var location = new Microsoft.Maps.Location(corrected.lat, corrected.lng);
+        createScaledPushpin(location, iconb64, 0.35, function (pin) {
+            map.entities.push(pin);
+			markers.push(pin);
+        });
+      }
+    }
+	
+	 function createScaledPushpin(location, imgUrl, scale, callback) {
+        var img = new Image();
+        img.onload = function () {
+            var c = document.createElement('canvas');
+            c.width = img.width * scale;
+            c.height = img.height * scale;
+
+            var context = c.getContext('2d');
+
+            //Draw scaled image
+            context.drawImage(img, 0, 0, c.width, c.height);
+
+            var pin = new Microsoft.Maps.Pushpin(location, {
+                //Generate a base64 image URL from the canvas.
+                icon: c.toDataURL(),
+
+                //Anchor based on the center of the image.
+                anchor: new Microsoft.Maps.Point(c.width/2,c.height)
+            });
+
+            if (callback) {
+                callback(pin);
+            }
+        };
+
+        img.src = imgUrl;
+    }
+
+    function addLines(params) {
+	  const datas = params.split(",");
+      var locations = [];
+      for (var i = 0; i < datas.length; i += 2) {
+        const lat = Number(datas[i]);
+		const lng = Number(datas[i+1]);
+		const corrected=wgs84togcj02(lat,lng)
+        locations.push(new Microsoft.Maps.Location(corrected.lat, corrected.lng));
+      }
+      var polyline = new Microsoft.Maps.Polyline(locations, {
+        strokeColor: "blue",
+        strokeThickness: 3
+      });
+      map.entities.push(polyline);
+      lines.push(polyline);
+    }
+
+    function updateBounds(params) {
+	  const datas = params.split(",");
+      var locations = [];
+      for (var i = 0; i < datas.length; i += 2) {
+        const lat = Number(datas[i]);
+		const lng = Number(datas[i+1]);
+		const corrected=wgs84togcj02(lat,lng)
+        locations.push(new Microsoft.Maps.Location(corrected.lat, corrected.lng));
+      }
+      var bounds = Microsoft.Maps.LocationRect.fromLocations(locations);
+      map.setView({ bounds: bounds });
+    }
+
+    function clearMarkers() {
+      for (var i = 0; i < markers.length; i++) {
+        map.entities.remove(markers[i]);
+      }
+      markers = [];
+    }
+
+    function clearLines() {
+      for (var i = 0; i < lines.length; i++) {
+        map.entities.remove(lines[i]);
+      }
+      lines = [];
+    }
+
+     var pi = 3.14159265358979324;
+var a = 6378245.0;
+var ee = 0.00669342162296594323;
+
+/**
+* WGS84坐标转换GCJ02坐标
+* @param wgLat：wgs纬度
+* @param wgLon：wgs经度
+* @return Array[lat:gcj纬度,lon:gcj经度]
+*/
+wgs84togcj02 = function (wgLat, wgLon){
+var mgLat, mgLon;
+if (outOfChina(wgLat, wgLon)){
+mgLat = wgLat;
+mgLon = wgLon;
+return;
+}
+var dLat = transformLat(wgLon - 105.0, wgLat - 35.0);
+var dLon = transformLon(wgLon - 105.0, wgLat - 35.0);
+var radLat = wgLat / 180.0 * pi;
+var magic = Math.sin(radLat);
+magic = 1 - ee * magic * magic;
+var sqrtMagic = Math.sqrt(magic);
+dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * pi);
+dLon = (dLon * 180.0) / (a / sqrtMagic * Math.cos(radLat) * pi);
+mgLat = wgLat + dLat;
+mgLon = wgLon + dLon;
+var arr = {};
+arr['lat'] = mgLat;
+arr['lng'] = mgLon;
+return arr;
+}
+var outOfChina = function(lat,lon) {
+if (lon < 72.004 || lon > 137.8347)
+return true;
+if (lat < 0.8293 || lat > 55.8271)
+return true;
+return false;
+}
+function transformLat(x, y){
+var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+ret += (20.0 * Math.sin(6.0 * x * pi) + 20.0 * Math.sin(2.0 * x * pi)) * 2.0 / 3.0;
+ret += (20.0 * Math.sin(y * pi) + 40.0 * Math.sin(y / 3.0 * pi)) * 2.0 / 3.0;
+ret += (160.0 * Math.sin(y / 12.0 * pi) + 320 * Math.sin(y * pi / 30.0)) * 2.0 / 3.0;
+return ret;
+}
+function transformLon(x, y){
+var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+ret += (20.0 * Math.sin(6.0 * x * pi) + 20.0 * Math.sin(2.0 * x * pi)) * 2.0 / 3.0;
+ret += (20.0 * Math.sin(x * pi) + 40.0 * Math.sin(x / 3.0 * pi)) * 2.0 / 3.0;
+ret += (150.0 * Math.sin(x / 12.0 * pi) + 300.0 * Math.sin(x / 30.0 * pi)) * 2.0 / 3.0;
+return ret;
+}
+
+const gcj02towgs84 = (lat,lng) => {
+  if (outOfChina(lat,lng)) {
+    return [lng, lat]
+  }
+  else {
+    var dlat = transformLat(lng - 105.0, lat - 35.0)
+    var dlng = transformLon(lng - 105.0, lat - 35.0)
+    var radlat = lat / 180.0 * pi
+    var magic = Math.sin(radlat)
+    magic = 1 - ee * magic * magic
+    var sqrtmagic = Math.sqrt(magic)
+    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi)
+    dlng = (dlng * 180.0) / (a / sqrtmagic * Math.cos(radlat) * pi)
+    const mglat = lat + dlat
+    const mglng = lng + dlng
+    return [lat * 2 - mglat,lng * 2 - mglng]
+  }
+}
+
+  </script>
+  <style>
+      body {
+          margin: 0;
+      }
+
+      #mapDiv {
+          width: 100vw;
+          height: 100vh;
+      }
+  </style>
+</head>
+<body onload="loadMap()">
+<div id="mapDiv"></div>
+</body>
+</html>

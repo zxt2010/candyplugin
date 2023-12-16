@@ -1,1 +1,92 @@
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>HELLO WORLD</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="text/javascript"
+          src="http://api.tianditu.gov.cn/api?v=4.0&tk="></script>
+  <script>
+    var map
+    var zoom = 3
+    var markers = []
+    var lines=[]
 
+    function onLoad() {
+      map = new T.Map("mapDiv");
+      map.centerAndZoom(new T.LngLat(104, 40), zoom);
+      //map.setStyle("black")
+      map.setMapType(TMAP_SATELLITE_MAP);
+    }
+
+    function updateMapCenter(latlng) {
+      const pos = latlng.split(",");
+      const lat = parseFloat(pos[0]);
+      const lng = parseFloat(pos[1]);
+      map.centerAndZoom(new T.LngLat(lng, lat), 12);
+    }
+
+    function addMarkers(params) {//lat,lng,ico64,lat......
+      const datas = params.split(",");
+      for (let i = 0; i < datas.length; i += 3) {
+        const lat = parseFloat(datas[i]);
+        const lng = parseFloat(datas[i + 1]);
+        const iconb64 = datas[i + 2];
+        let icon = new T.Icon({
+          iconUrl: 'data:image/png;base64,'+iconb64,
+          iconSize: new T.Point(80, 50),
+          iconAnchor: new T.Point(40, 50)
+        });
+        let m = new T.Marker(new T.LngLat(lng, lat), { icon: icon });
+        markers.push(m);
+        map.addOverLay(m);
+      }
+    }
+
+    function addLines(params) {//lat,lng,lat.....
+      const datas = params.split(",");
+      let points = [];
+      for (let i = 0; i < datas.length; i += 2) {
+        const lat = parseFloat(datas[i]);
+        const lng = parseFloat(datas[i + 1]);
+        points.push(new T.LngLat(lng, lat));
+      }
+      let m = new T.Polyline(points, { color: "#FFFFFF" });
+      lines.push(m)
+      map.addOverLay(m);
+    }
+
+    function updateBounds(params) {
+      const datas = params.split(",");
+      let points = [];
+      for (let i = 0; i < datas.length; i += 2) {
+        const lat = parseFloat(datas[i]);
+        const lng = parseFloat(datas[i + 1]);
+        points.push(new T.LngLat(lng, lat));
+      }
+      map.setViewport(points)
+    }
+
+    function clearLines(){
+      lines.forEach((v) => map.removeOverLay(v));
+    }
+
+     function clearMarkers(){
+       markers.forEach((v) => map.removeOverLay(v));
+    }
+
+
+
+
+
+  </script>
+  <style>
+      body {
+          margin: 0;
+      }
+
+  </style>
+</head>
+<body onLoad="onLoad()">
+<div id="mapDiv" style="width:100vw; height:100vh"></div>
+</body>
+</html>
